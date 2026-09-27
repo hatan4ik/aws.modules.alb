@@ -1,0 +1,7 @@
+# tests/integration/setup is the reserved location for short-lived fixture
+# infrastructure created and destroyed by the integration suite in the
+# caller's own account; it is not a deployable pattern and is excluded from
+# misconfiguration scanning.
+scan:
+  skip-dirs:
+    - tests/integration/setup

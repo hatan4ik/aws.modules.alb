@@ -1,0 +1,99 @@
+name: Bug report
+description: A resource, validation, or output behaves differently from what the module documents.
+title: "bug: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Redact account IDs, ARNs, and CIDR ranges before pasting configuration or output.
+  - type: input
+    id: module-version
+    attributes:
+      label: Module version or commit
+      description: The tag or commit SHA pinned in your module `source` / `ref`.
+      placeholder: v1.0.0
+    validations:
+      required: true
+  - type: input
+    id: terraform-version
+    attributes:
+      label: Terraform version
+      description: Output of `terraform version`.
+      placeholder: 1.7.5
+    validations:
+      required: true
+  - type: input
+    id: provider-version
+    attributes:
+      label: AWS provider version
+      description: The `hashicorp/aws` version recorded in your `.terraform.lock.hcl`.
+      placeholder: 6.66.0
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected component
+      options:
+        - the ALB itself (alb.tf)
+        - security group (security_group.tf)
+        - target groups (target_groups.tf)
+        - listeners (listeners.tf)
+        - listener rules (listener_rules.tf)
+        - WAF association (waf.tf)
+        - advisory checks (checks.tf)
+        - target_group_arns / ecs-service interface
+        - examples
+        - integration suite
+        - not sure
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: The smallest module call that reproduces the problem.
+      render: hcl
+      placeholder: |
+        module "alb" {
+          source = "git::https://github.com/hatan4ik/aws.modules.alb.git?ref=v1.0.0"
+
+          name              = "app"
+          vpc_id            = "vpc-0123456789abcdef0"
+          public_subnet_ids = ["subnet-0123456789abcdef0", "subnet-0123456789abcdef1"]
+          certificate_arn   = "arn:aws:acm:us-east-1:123456789012:certificate/11111111-1111-1111-1111-111111111111"
+
+          target_groups             = { app = { port = 8080 } }
+          default_target_group_key = "app"
+        }
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Plan or apply output
+      description: Relevant `terraform plan` or `terraform apply` output, with ARNs, account IDs, and CIDR ranges redacted.
+      render: shell
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Confirmations
+      options:
+        - label: I redacted account IDs, ARNs, and real CIDR ranges from everything above.
+          required: true
+        - label: I searched existing issues for this problem.
+          required: true

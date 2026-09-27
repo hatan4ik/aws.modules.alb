@@ -1,0 +1,57 @@
+name: Feature request
+description: Propose a new input, output, or behaviour for the module.
+title: "feat: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What can you not do with the module today, and why does it matter?
+    validations:
+      required: true
+  - type: textarea
+    id: interface
+    attributes:
+      label: Proposed interface
+      description: The variables, outputs, or resources you expect, written as HCL.
+      render: hcl
+      placeholder: |
+        variable "example" {
+          description = "..."
+          type        = string
+          default     = null
+        }
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where does it belong?
+      options:
+        - the ALB itself (alb.tf)
+        - security group (security_group.tf)
+        - target groups (target_groups.tf)
+        - listeners (listeners.tf)
+        - listener rules (listener_rules.tf)
+        - WAF association (waf.tf)
+        - advisory checks (checks.tf)
+        - a new example
+        - the integration suite
+        - not sure
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Workarounds you tried, such as bring-your-own resources beside the module.
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Design constraints
+      options:
+        - label: The proposal does not require the module to add data sources beyond the one documented exception.
+        - label: The proposal preserves target_group_arns's key-shape contract with aws.modules.ecs-service, or the change is called out as breaking.
+        - label: The proposal is backwards compatible, or the breaking change is called out above.
