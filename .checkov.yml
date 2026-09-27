@@ -4,3 +4,27 @@
 # policy scanning.
 skip-path:
   - tests/integration/setup
+
+# CKV2_AWS_76 is a real, permanently out-of-scope finding for this module's
+# design, not a resolution artifact: it checks that an ALB's attached WAFv2
+# web ACL includes the AWS Managed Rule for the Log4j vulnerability, which
+# means inspecting the rule statements of an aws_wafv2_web_acl resource. This
+# module never creates that resource. web_acl_arn (waf.tf) is a plain,
+# caller-supplied ARN of a web ACL owned and defined elsewhere — the same
+# "every external dependency is an identifier the caller passes in" pattern
+# as aws.modules.ksm and aws.modules.state (docs/DESIGN.md) — so there is no
+# rule content here for Checkov to ever find compliant, in any configuration
+# this module can produce.
+#
+# Verified across every shape the module renders: examples/path-based-routing
+# (no web_acl_arn at all) and examples/with-waf (a real association to an
+# externally-owned ACL) both fail identically; only a bare scan of the root
+# module's own files with no calling example (an unresolved variable, never
+# a real usage) happens to pass trivially. That is the opposite of the usual
+# "isolated scan passes, composed scan fails" pattern documented for
+# CKV_AWS_163/CKV_AWS_51/CKV_AWS_28 in aws.modules.ecs's .checkov.yml, and
+# confirms the same conclusion from the other direction: no real invocation
+# of this module can satisfy this check, because satisfying it is
+# aws.modules.waf's responsibility (the web ACL it manages), not this one's.
+skip-check:
+  - CKV2_AWS_76 # ALB's WAFv2 web ACL has the Log4j AMR — this module never creates the web ACL; web_acl_arn is a plain external ARN (docs/DESIGN.md).

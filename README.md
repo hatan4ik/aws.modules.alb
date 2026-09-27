@@ -281,4 +281,72 @@ Security reports go through [SECURITY.md](SECURITY.md).
 Apache-2.0. See [LICENSE](LICENSE).
 
 <!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.7.0, < 2.0.0 |
+| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 6.35.0, < 7.0.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 6.35.0, < 7.0.0 |
+
+## Modules
+
+No modules.
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [aws_lb.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lb) | resource |
+| [aws_lb_listener.http](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lb_listener) | resource |
+| [aws_lb_listener.https](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lb_listener) | resource |
+| [aws_lb_listener_certificate.additional](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lb_listener_certificate) | resource |
+| [aws_lb_listener_rule.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lb_listener_rule) | resource |
+| [aws_lb_target_group.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lb_target_group) | resource |
+| [aws_security_group.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group) | resource |
+| [aws_vpc_security_group_egress_rule.vpc](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc_security_group_egress_rule) | resource |
+| [aws_vpc_security_group_ingress_rule.listener](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc_security_group_ingress_rule) | resource |
+| [aws_wafv2_web_acl_association.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/wafv2_web_acl_association) | resource |
+| [aws_vpc.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/vpc) | data source |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| <a name="input_access_logs"></a> [access\_logs](#input\_access\_logs) | Access log destination the caller already created and owns (for example through aws.modules.s3), and has already granted the regional ELB log-delivery service account permission to write to via that bucket's policy. This module only points the ALB at bucket\_name (and optional prefix); it does not create the bucket or write its policy. null (default) leaves access logging off. | <pre>object({<br/>    bucket_name = string<br/>    prefix      = optional(string)<br/>  })</pre> | `null` | no |
+| <a name="input_additional_certificate_arns"></a> [additional\_certificate\_arns](#input\_additional\_certificate\_arns) | Further ACM certificate ARNs attached to the HTTPS listener for SNI. Must be empty when create\_http\_only = true, since there is then no HTTPS listener to attach them to. | `set(string)` | `[]` | no |
+| <a name="input_certificate_arn"></a> [certificate\_arn](#input\_certificate\_arn) | ACM certificate ARN for the HTTPS listener, for example from the already-released aws.modules.acm. Required unless create\_http\_only = true, and must be left unset when it is (a precondition on the ALB enforces this exactly-one-path rule). | `string` | `null` | no |
+| <a name="input_create_http_only"></a> [create\_http\_only](#input\_create\_http\_only) | false (default) serves HTTPS from certificate\_arn, per ADR-0004's "HTTPS at the edge" decision. true skips the HTTPS listener entirely and serves plain HTTP only: a narrow escape hatch for a non-production ALB or one that sits behind something that already terminates TLS (for example a CloudFront or Global Accelerator hop that re-encrypts elsewhere) — never a default anyone should reach for. Mutually exclusive-required with certificate\_arn: exactly one of the two paths is valid, enforced by a precondition on the ALB. | `bool` | `false` | no |
+| <a name="input_default_target_group_key"></a> [default\_target\_group\_key](#input\_default\_target\_group\_key) | target\_groups key the HTTPS (or HTTP-only) listener's default action forwards to. Must reference a real target\_groups key; enforced by a precondition on the listener, since a variable validation cannot see another variable's value under Terraform 1.7. | `string` | n/a | yes |
+| <a name="input_deletion_protection"></a> [deletion\_protection](#input\_deletion\_protection) | true (default) blocks the ALB from being deleted until it is turned off. A check block warns, advisory only, when this is false. | `bool` | `true` | no |
+| <a name="input_drop_invalid_header_fields"></a> [drop\_invalid\_header\_fields](#input\_drop\_invalid\_header\_fields) | true (default) drops HTTP requests with invalid header fields, an AWS security best practice. This module is secure by default. | `bool` | `true` | no |
+| <a name="input_idle_timeout"></a> [idle\_timeout](#input\_idle\_timeout) | Seconds the ALB keeps an idle connection open, 1-4000. | `number` | `60` | no |
+| <a name="input_internal"></a> [internal](#input\_internal) | false (default) creates an internet-facing ALB in public\_subnet\_ids, which is this module's whole purpose per ADR-0004. Set true only for a documented internal-only need; public\_subnet\_ids still names the subnets the ALB's network interfaces are created in. | `bool` | `false` | no |
+| <a name="input_listener_rules"></a> [listener\_rules](#input\_listener\_rules) | Path- or host-based routing rules beyond the default action, keyed by a short rule name. Each rule's target\_group\_key must reference a target\_groups key (enforced by a precondition, not a variable validation, for the same cross-variable reason as default\_target\_group\_key) and each rule needs at least one of conditions.path\_patterns or conditions.host\_headers. Rules attach to whichever listener actually serves traffic: HTTPS when it exists, otherwise the HTTP-only listener. Empty by default; the listener's default action alone then handles every request. | <pre>map(object({<br/>    priority         = number<br/>    target_group_key = string<br/>    conditions = object({<br/>      path_patterns = optional(set(string))<br/>      host_headers  = optional(set(string))<br/>    })<br/>  }))</pre> | `{}` | no |
+| <a name="input_name"></a> [name](#input\_name) | Name of the ALB. AWS caps load balancer names at 32 characters, alphanumeric and hyphens, must not start or end with a hyphen, and must not start with "internal-" (an AWS-reserved prefix regardless of the internal input). Also used to derive the security group name and every target group name (name-<key>), so keep it short enough to leave room for your longest target\_groups key. | `string` | n/a | yes |
+| <a name="input_public_subnet_ids"></a> [public\_subnet\_ids](#input\_public\_subnet\_ids) | Subnets the ALB's network interfaces are created in, at least two in different Availability Zones. Named for this module's normal internet-facing case (ADR-0004); still the subnet set to use when internal = true. | `set(string)` | n/a | yes |
+| <a name="input_redirect_http_to_https"></a> [redirect\_http\_to\_https](#input\_redirect\_http\_to\_https) | true (default) creates an HTTP listener on port 80 whose only job is a 301 redirect to the HTTPS listener; false creates no port 80 listener at all, so the security group never opens it. Not applicable when create\_http\_only = true (there is no HTTPS listener to redirect to); a precondition rejects setting it to anything but its default true in that mode instead of silently ignoring the override. | `bool` | `true` | no |
+| <a name="input_security_group_ingress_cidrs"></a> [security\_group\_ingress\_cidrs](#input\_security\_group\_ingress\_cidrs) | CIDRs allowed to reach the ALB's active listener ports (443 when HTTPS exists, 80 when an HTTP listener exists). Defaults to ["0.0.0.0/0"] since a public ALB is the point (ADR-0004), but must be set explicitly and non-empty: this module never silently defaults to an empty set that would make the ALB unreachable. | `set(string)` | <pre>[<br/>  "0.0.0.0/0"<br/>]</pre> | no |
+| <a name="input_tags"></a> [tags](#input\_tags) | Tags applied to every resource the module creates. The module adds a Name tag and never overrides caller tags. | `map(string)` | `{}` | no |
+| <a name="input_target_groups"></a> [target\_groups](#input\_target\_groups) | Target groups keyed by a short logical name, for example "app" or "api". These keys are also the keys of the target\_group\_arns output, so a caller folds that output straight into aws.modules.ecs-service's load\_balancers map. target\_type defaults to "ip", correct for Fargate awsvpc mode. At least one entry is required: an ALB with no target groups is meaningless. | <pre>map(object({<br/>    port        = number<br/>    protocol    = optional(string, "HTTP")<br/>    target_type = optional(string, "ip")<br/>    health_check = optional(object({<br/>      path                = optional(string, "/")<br/>      interval            = optional(number, 30)<br/>      timeout             = optional(number, 5)<br/>      healthy_threshold   = optional(number, 3)<br/>      unhealthy_threshold = optional(number, 3)<br/>      matcher             = optional(string, "200")<br/>    }), {})<br/>    deregistration_delay = optional(number, 30)<br/>  }))</pre> | n/a | yes |
+| <a name="input_vpc_id"></a> [vpc\_id](#input\_vpc\_id) | VPC the ALB, its security group, and its target groups are created in. | `string` | n/a | yes |
+| <a name="input_web_acl_arn"></a> [web\_acl\_arn](#input\_web\_acl\_arn) | ARN of a REGIONAL-scope WAFv2 web ACL (for example from aws.modules.waf) to associate with the ALB. Optional: this module takes the ARN as a plain input and never calls aws.modules.waf itself, the same "every external dependency is an identifier the caller passes in" pattern as aws.modules.ksm and aws.modules.state. | `string` | `null` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| <a name="output_alb_arn"></a> [alb\_arn](#output\_alb\_arn) | ARN of the ALB. |
+| <a name="output_alb_arn_suffix"></a> [alb\_arn\_suffix](#output\_alb\_arn\_suffix) | ARN suffix of the ALB, needed by CloudWatch metrics and by aws.modules.global-accelerator's health checks. |
+| <a name="output_alb_dns_name"></a> [alb\_dns\_name](#output\_alb\_dns\_name) | DNS name of the ALB. |
+| <a name="output_alb_zone_id"></a> [alb\_zone\_id](#output\_alb\_zone\_id) | Route 53 hosted zone ID of the ALB, for an alias record through aws.modules.route53. |
+| <a name="output_http_listener_arn"></a> [http\_listener\_arn](#output\_http\_listener\_arn) | ARN of the HTTP listener (redirect or http-only), or null when redirect\_http\_to\_https = false and create\_http\_only = false, in which case no port 80 listener exists. |
+| <a name="output_https_listener_arn"></a> [https\_listener\_arn](#output\_https\_listener\_arn) | ARN of the HTTPS listener, or null when create\_http\_only = true and no HTTPS listener exists. |
+| <a name="output_security_group_id"></a> [security\_group\_id](#output\_security\_group\_id) | ID of the ALB's security group. |
+| <a name="output_target_group_arns"></a> [target\_group\_arns](#output\_target\_group\_arns) | Plain ARN of each target group, keyed by the same keys as the target\_groups input. Drop this straight into aws.modules.ecs-service's load\_balancers[*].target\_group\_arn with no translation: this is the module's interface contract with ecs-service, proved in tests/target\_group\_arns.tftest.hcl. |
 <!-- END_TF_DOCS -->

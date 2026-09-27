@@ -3,7 +3,23 @@
 # routing resource lives in listeners.tf and listener_rules.tf.
 
 resource "aws_lb" "this" {
-  name               = var.name
+  # CKV2_AWS_20 ("ALB redirects HTTP requests into HTTPS ones") cannot see
+  # into listeners.tf's aws_lb_listener.http dynamic "default_action" blocks
+  # to confirm the redirect exists; it is a verified false positive in the
+  # default shape (redirect_http_to_https = true, tests/listeners.tftest.hcl)
+  # and a real, documented, explicit deviation only under create_http_only.
+  # See the matching comment on aws_lb_listener.http in listeners.tf.
+  #checkov:skip=CKV2_AWS_20:See the comment on aws_lb_listener.http in listeners.tf — false positive in the default redirect shape, real only in the explicit create_http_only mode (docs/DESIGN.md).
+  name = var.name
+
+  # AWS-0053 ("Load balancer is exposed publicly") is real, not a resolution
+  # artifact, whenever internal = false: this module's whole reason for
+  # existing, per ADR-0004, is the one deliberately public thing in the
+  # workload path ("the public ALB subnets are the sole justified public
+  # subnets"). A caller who genuinely needs an internal ALB sets internal =
+  # true (examples/internal-http-only); the public default is intentional
+  # and documented, not an oversight.
+  #trivy:ignore:AWS-0053
   internal           = var.internal
   load_balancer_type = "application"
   security_groups    = [aws_security_group.this.id]

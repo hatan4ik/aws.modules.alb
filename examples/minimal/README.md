@@ -39,4 +39,42 @@ terraform plan \
 ```
 
 <!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.7.0, < 2.0.0 |
+| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 6.35.0, < 7.0.0 |
+
+## Providers
+
+No providers.
+
+## Modules
+
+| Name | Source | Version |
+|------|--------|---------|
+| <a name="module_alb"></a> [alb](#module\_alb) | ../../ | n/a |
+
+## Resources
+
+No resources.
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| <a name="input_certificate_arn"></a> [certificate\_arn](#input\_certificate\_arn) | ACM certificate ARN for the HTTPS listener, for example from aws.modules.acm's validated\_arn output. This example only carries the placeholder through; it does not request a certificate itself. | `string` | n/a | yes |
+| <a name="input_name"></a> [name](#input\_name) | ALB name. | `string` | `"app"` | no |
+| <a name="input_public_subnet_ids"></a> [public\_subnet\_ids](#input\_public\_subnet\_ids) | At least two public subnets in different Availability Zones. | `set(string)` | n/a | yes |
+| <a name="input_region"></a> [region](#input\_region) | AWS region the ALB is created in. | `string` | `"us-east-1"` | no |
+| <a name="input_vpc_id"></a> [vpc\_id](#input\_vpc\_id) | VPC to create the ALB in. | `string` | n/a | yes |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| <a name="output_alb_dns_name"></a> [alb\_dns\_name](#output\_alb\_dns\_name) | DNS name of the ALB. Feed alb\_dns\_name and alb\_zone\_id into an aws.modules.route53 alias record. |
+| <a name="output_https_listener_arn"></a> [https\_listener\_arn](#output\_https\_listener\_arn) | ARN of the HTTPS listener. |
+| <a name="output_target_group_arns"></a> [target\_group\_arns](#output\_target\_group\_arns) | Plain ARN of the one target group, keyed "app". Drop this straight into aws.modules.ecs-service's load\_balancers[*].target\_group\_arn. |
 <!-- END_TF_DOCS -->
