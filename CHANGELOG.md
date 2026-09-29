@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-09-29
+
+### Changed
+
+- The ALB's security group, its listener ingress rule, and its VPC-CIDR egress rule now come from the external `aws.modules.security-group` v1.1.0 module instead of being hand-rolled here, ending an independent copy of the same primitive also used by `aws.modules.ecs-service` and `aws.modules.vpc`'s endpoints submodule. `create_before_destroy_group = true` preserves this module's original `lifecycle.create_before_destroy` guarantee exactly — see `aws.modules.security-group`'s `docs/CONSUMERS.md` for why that guard needed a dedicated input rather than being dropped, and the `moved` blocks this change needs for a live consumer's state. The security group's real name, description, ingress/egress content, and tags are unchanged. The `#checkov:skip=CKV_AWS_260` comment, previously inline on the ingress rule resource, moves to `.checkov.yml`: Checkov attributes an inline skip to the resource block it is physically adjacent to, which no longer exists in this repository.
+
 ## [1.0.0] - 2026-09-27
 
 Brand new module: no v0.x baseline, no live consumer, no upgrade guide. One module call provisions one regional Application Load Balancer per [ADR-0004](/docs/adr/0004-edge-ingress-and-egress.md): the ALB, its security group, its target groups, its HTTPS and/or HTTP listener, and any path/host-based listener rules.

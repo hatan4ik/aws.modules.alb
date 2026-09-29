@@ -70,18 +70,25 @@ run "defaults" {
     error_message = "The default HTTP listener must redirect to port 443 with a 301."
   }
 
+  # aws_security_group.this/aws_vpc_security_group_*_rule now live inside the
+  # external aws.modules.security-group module, so a test's module.<name>
+  # reference can see only its declared outputs, never those resources
+  # directly (aws.modules.security-group's own test suite proves how the
+  # group and rules actually render). What this module owns and can assert
+  # here is that its own locals compute the right rule content, and that the
+  # module was invoked with that many rules.
   assert {
-    condition     = aws_vpc_security_group_egress_rule.vpc.cidr_ipv4 == "10.0.0.0/16" && aws_vpc_security_group_egress_rule.vpc.ip_protocol == "-1"
+    condition     = local.egress_rules["vpc"].cidr == "10.0.0.0/16"
     error_message = "Egress must be scoped to exactly the VPC's own CIDR, never left unrestricted."
   }
 
   assert {
-    condition     = length(aws_vpc_security_group_ingress_rule.listener) == 2
+    condition     = length(local.ingress_rules) == 2 && length(module.security_group.ingress_rule_ids) == 2
     error_message = "Ingress must have exactly one rule per (active port, CIDR) pair: 443 and 80 each paired with the one default CIDR."
   }
 
   assert {
-    condition     = toset([for rule in values(aws_vpc_security_group_ingress_rule.listener) : rule.from_port]) == toset([80, 443])
+    condition     = toset([for rule in values(local.ingress_rules) : rule.port]) == toset([80, 443])
     error_message = "Ingress rules must cover exactly ports 80 and 443 by default."
   }
 

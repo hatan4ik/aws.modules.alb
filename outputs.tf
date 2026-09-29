@@ -25,7 +25,7 @@ output "target_group_arns" {
 
 output "security_group_id" {
   description = "ID of the ALB's security group."
-  value       = aws_security_group.this.id
+  value       = module.security_group.id
 }
 
 output "https_listener_arn" {

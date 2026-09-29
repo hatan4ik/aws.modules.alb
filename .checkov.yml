@@ -26,5 +26,18 @@ skip-path:
 # confirms the same conclusion from the other direction: no real invocation
 # of this module can satisfy this check, because satisfying it is
 # aws.modules.waf's responsibility (the web ACL it manages), not this one's.
+# CKV_AWS_260 is a real, accepted-by-design finding, not a resolution
+# artifact: the listener ingress rule this module renders is a deliberately
+# public ALB per ADR-0004 (a listener open to 0.0.0.0/0 is the point, not an
+# oversight), and web_acl_arn is optional (the checks.tf public_without_waf
+# check warns on every plan when it and 0.0.0.0/0 are combined, without
+# blocking a caller who has another reason not to attach one). Previously an
+# inline #checkov:skip comment directly on the rule resource; moved here
+# because that resource now lives inside the external
+# aws.modules.security-group module (security_group.tf) and Checkov
+# attributes an inline skip comment to the resource block it is physically
+# adjacent to, which no longer exists in this repository after the
+# migration.
 skip-check:
   - CKV2_AWS_76 # ALB's WAFv2 web ACL has the Log4j AMR — this module never creates the web ACL; web_acl_arn is a plain external ARN (docs/DESIGN.md).
+  - CKV_AWS_260 # Public ALB listener ingress by design (ADR-0004); web_acl_arn is optional and the public_without_waf check warns when it and 0.0.0.0/0 are combined.
