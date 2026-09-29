@@ -22,7 +22,7 @@ resource "aws_lb" "this" {
   #trivy:ignore:AWS-0053
   internal           = var.internal
   load_balancer_type = "application"
-  security_groups    = [aws_security_group.this.id]
+  security_groups    = [module.security_group.id]
   subnets            = local.public_subnet_ids
 
   idle_timeout               = var.idle_timeout

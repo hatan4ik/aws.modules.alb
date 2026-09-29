@@ -63,7 +63,7 @@ run "https_with_redirect_is_the_default_shape" {
   }
 
   assert {
-    condition     = length(aws_vpc_security_group_ingress_rule.listener) == 2
+    condition     = length(local.ingress_rules) == 2 && length(module.security_group.ingress_rule_ids) == 2
     error_message = "Both ports 80 and 443 must be open in the default shape."
   }
 }
@@ -86,7 +86,7 @@ run "https_only_with_redirect_disabled" {
   }
 
   assert {
-    condition     = length(aws_vpc_security_group_ingress_rule.listener) == 1 && values(aws_vpc_security_group_ingress_rule.listener)[0].from_port == 443
+    condition     = length(local.ingress_rules) == 1 && values(local.ingress_rules)[0].port == 443
     error_message = "Only port 443 may be open when there is no HTTP listener at all."
   }
 }
@@ -114,7 +114,7 @@ run "http_only_forwards_directly" {
   }
 
   assert {
-    condition     = length(aws_vpc_security_group_ingress_rule.listener) == 1 && values(aws_vpc_security_group_ingress_rule.listener)[0].from_port == 80
+    condition     = length(local.ingress_rules) == 1 && values(local.ingress_rules)[0].port == 80
     error_message = "Only port 80 may be open in HTTP-only mode."
   }
 }

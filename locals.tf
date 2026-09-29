@@ -24,6 +24,13 @@ locals {
     "${pair[0]}-${pair[1]}" => { port = tonumber(pair[0]), cidr = pair[1] }
   }
 
+  # Egress: exactly the VPC's own CIDR, never unrestricted. A map (not a
+  # single value) because that is the shape aws.modules.security-group's
+  # egress_rules input expects (security_group.tf).
+  egress_rules = {
+    vpc = { cidr = data.aws_vpc.this.cidr_block }
+  }
+
   # Sorted for a deterministic aws_lb.subnets plan diff.
   public_subnet_ids = sort(tolist(var.public_subnet_ids))
 }
