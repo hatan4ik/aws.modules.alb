@@ -11,23 +11,23 @@
 # that lookup itself and passes the resolved CIDR straight to the egress
 # rule's cidr_ipv4.
 #
-# TEMPORARY PIN: the ref below is commit 390733e on
-# aws.modules.security-group's fix/cbd-group-name-prefix branch, not a tagged
-# release. It carries the 1.2.0 fix that names the create_before_destroy
-# group with name_prefix = "<name>-" instead of a fixed name, so a
-# description-only change no longer fails with InvalidGroup.Duplicate. The
-# group's AWS name is therefore generated ("<var.name>-alb-" plus a unique
-# suffix, known after apply); its Name tag stays "<var.name>-alb". Re-pin to
-# the final released tag's commit once that branch is merged and tagged.
-# (The PR was squash-merged to main as 6173619 with an identical module tree,
-# but 390733e itself is not on main and no v1.2.0 tag exists yet.)
+# The ref below is commit 6cf3733 on aws.modules.security-group's main,
+# which is tag v1.2.0 (the tag exists but its GitHub Release publish step
+# failed on an unrelated signing-verification issue in the release pipeline
+# itself -- the commit and its code are the real, merged v1.2.0, so pinning
+# to it directly is correct regardless of whether the Release page exists).
+# It carries the 1.2.0 fix that names the create_before_destroy group with
+# name_prefix = "<name>-" instead of a fixed name, so a description-only
+# change no longer fails with InvalidGroup.Duplicate. The group's AWS name
+# is therefore generated ("<var.name>-alb-" plus a unique suffix, known
+# after apply); its Name tag stays "<var.name>-alb".
 
 data "aws_vpc" "this" {
   id = var.vpc_id
 }
 
 module "security_group" {
-  source = "git::https://github.com/hatan4ik/aws.modules.security-group.git?ref=390733e8c1d6656fbc8092e7fd1b0b6e1eac6e13" # TEMPORARY: unmerged fix/cbd-group-name-prefix (1.2.0 fix), not a release tag
+  source = "git::https://github.com/hatan4ik/aws.modules.security-group.git?ref=6cf3733d30f435ce107f02001adcdf6da74d81e2" # v1.2.0
 
   create_before_destroy_group = true
   name                        = "${var.name}-alb"

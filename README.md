@@ -369,7 +369,7 @@ Apache-2.0. See [LICENSE](LICENSE).
 
 | Name | Source | Version |
 |------|--------|---------|
-| <a name="module_security_group"></a> [security\_group](#module\_security\_group) | git::https://github.com/hatan4ik/aws.modules.security-group.git | 390733e8c1d6656fbc8092e7fd1b0b6e1eac6e13 |
+| <a name="module_security_group"></a> [security\_group](#module\_security\_group) | git::https://github.com/hatan4ik/aws.modules.security-group.git | 6cf3733d30f435ce107f02001adcdf6da74d81e2 |
 
 ## Resources
 
