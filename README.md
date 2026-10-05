@@ -169,10 +169,15 @@ Not created here
 
 ## Lifecycle notes
 
-- `aws_security_group.this` and every `aws_lb_target_group.this` entry use
-  `create_before_destroy = true`, so a change that would otherwise conflict
-  (a target group's `port` or `protocol`, for example) creates the
-  replacement before the old one is destroyed.
+- The security group (`module.security_group.aws_security_group.this_cbd[0]`)
+  and every `aws_lb_target_group.this` entry use `create_before_destroy =
+  true`, so a change that would otherwise conflict (a target group's `port`
+  or `protocol`, or the security group's description, for example) creates
+  the replacement before the old one is destroyed. The security group's AWS
+  name is generated from `name_prefix = "<name>-alb-"` (known only after
+  apply) so the replacement never collides with the old group's name; its
+  `Name` tag stays `<name>-alb`. Use `security_group_id` or the tag, never
+  the group name, to refer to it.
 - Target group and listener rule keys drive their `for_each`, so adding a
   `target_groups` or `listener_rules` entry adds exactly one resource
   instance and removing one removes exactly one.
@@ -298,7 +303,7 @@ Apache-2.0. See [LICENSE](LICENSE).
 
 | Name | Source | Version |
 |------|--------|---------|
-| <a name="module_security_group"></a> [security\_group](#module\_security\_group) | git::https://github.com/hatan4ik/aws.modules.security-group.git | a2142e9b7351c81735e4dbefdc7c66155dd4c266 |
+| <a name="module_security_group"></a> [security\_group](#module\_security\_group) | git::https://github.com/hatan4ik/aws.modules.security-group.git | 390733e8c1d6656fbc8092e7fd1b0b6e1eac6e13 |
 
 ## Resources
 
