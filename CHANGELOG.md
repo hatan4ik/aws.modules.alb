@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- `listener_rule_arns` output: a `map(string)` keyed exactly like `listener_rules`, each value that rule's listener-rule ARN, and an empty map when no rules are declared. It is what `aws.modules.ecs-service`'s `BLUE_GREEN` strategy needs for `load_balancers[*].advanced_configuration.production_listener_rule` (and `test_listener_rule`); before this, only the ROLLING strategy could be wired from this module's outputs. Additive and non-breaking. Proved in `tests/listener_rule_arns.tftest.hcl`; README has a blue/green composition example. Known caveat: ECS rewrites the production rule's forward action while shifting traffic, which shows as drift on the next plan of this module (see docs/DESIGN.md).
+
+### Changed
+
+- **Dependency, TEMPORARY pin:** `aws.modules.security-group` moves from v1.1.0 (`a2142e9`) to commit `390733e8c1d6656fbc8092e7fd1b0b6e1eac6e13` on its `fix/cbd-group-name-prefix` branch. TEMPORARY: pins to unmerged security-group commit 390733e — must be re-pinned to the final released tag once hatan4ik/aws.modules.security-group's fix/cbd-group-name-prefix branch is merged and tagged. This picks up the fix for `create_before_destroy_group = true`: the ALB's security group is now named by AWS from `name_prefix = "<name>-alb-"` (its `name` is known only after apply) instead of the fixed `<name>-alb`, so a description-only change creates the replacement first without failing on `InvalidGroup.Duplicate`. The `Name` tag stays `<name>-alb`. Upgrade impact for an ALB already applied with 1.0.1: the first plan replaces `module.security_group.aws_security_group.this_cbd[0]` once (create-before-destroy), so the security group ID changes and the ALB's `security_groups` is updated to the new ID before the old group is deleted; anything outside this configuration referencing the old ID blocks that deletion.
+
 ## [1.0.1] - 2026-09-29
 
 ### Changed
@@ -34,5 +42,6 @@ Brand new module: no v0.x baseline, no live consumer, no upgrade guide. One modu
 - Credential-driven integration suite `smoke` in `tests/integration/` against a disposable VPC fixture (HTTP-only, avoiding the need for a real ACM certificate), a `make integration-smoke` target, a dispatch-only `integration` workflow, and the IAM trust and permissions documents the role needs.
 - `docs/DESIGN.md`, `CONTRIBUTING.md`, `SECURITY.md`, `LICENSE`, the `Makefile` quality gate, pre-commit, tflint, and terraform-docs configuration, Dependabot, issue and pull request templates, and the `module-release` workflow.
 
-[Unreleased]: https://github.com/hatan4ik/aws.modules.alb/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/hatan4ik/aws.modules.alb/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/hatan4ik/aws.modules.alb/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/hatan4ik/aws.modules.alb/releases/tag/v1.0.0
