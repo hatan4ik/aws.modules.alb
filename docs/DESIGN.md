@@ -91,7 +91,7 @@ exists yet (see "Out of scope for v1").
 
 - **No submodule call to `aws.modules.waf`.** `web_acl_arn` is a plain string
   input, validated to look like a REGIONAL WAFv2 web ACL ARN. Same pattern as
-  `aws.modules.ksm` and `aws.modules.state` consuming external identifiers:
+  `aws.modules.kms` and `aws.modules.state` consuming external identifiers:
   every external dependency is an ARN or ID the caller passes in, never a
   module call this module owns the lifecycle of.
 - **No S3 bucket for access logs.** `access_logs` takes a `bucket_name` (and

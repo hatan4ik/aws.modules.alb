@@ -3,7 +3,7 @@
 Otherwise identical to the minimal example, this associates a caller-supplied
 REGIONAL-scope WAFv2 web ACL (`web_acl_arn`) with the ALB. This module never
 creates or owns the web ACL: `web_acl_arn` is a plain ARN, the same
-external-dependency pattern `aws.modules.ksm` and `aws.modules.state` use for
+external-dependency pattern `aws.modules.kms` and `aws.modules.state` use for
 identifiers they consume rather than manage. Pass the `arn` output of a
 `aws.modules.waf` call (or any other REGIONAL web ACL) here, and the advisory
 `public_without_waf` check no longer fires for a public ALB.

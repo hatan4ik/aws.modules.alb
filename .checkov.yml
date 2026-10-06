@@ -12,7 +12,7 @@ skip-path:
 # module never creates that resource. web_acl_arn (waf.tf) is a plain,
 # caller-supplied ARN of a web ACL owned and defined elsewhere — the same
 # "every external dependency is an identifier the caller passes in" pattern
-# as aws.modules.ksm and aws.modules.state (docs/DESIGN.md) — so there is no
+# as aws.modules.kms and aws.modules.state (docs/DESIGN.md) — so there is no
 # rule content here for Checkov to ever find compliant, in any configuration
 # this module can produce.
 #
