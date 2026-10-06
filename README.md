@@ -30,6 +30,11 @@ group, without setting anything else:
   container_name = "app", container_port = 8080 } }` is the whole
   translation a caller writes, and `tests/target_group_arns.tftest.hcl`
   proves the key-shape contract directly.
+- `listener_rule_arns` completes the blue/green wiring. Keyed exactly like
+  `listener_rules`, each value a listener-rule ARN for `ecs-service`'s
+  `load_balancers[*].advanced_configuration.production_listener_rule`; an
+  empty map when no rules are declared. See
+  [Blue/green with `ecs-service`](#bluegreen-with-ecs-service).
 - A security group scoped both ways. Ingress only on the listener ports that
   actually exist (443 and/or 80, never a port nothing is behind); egress
   scoped to the VPC's own CIDR, never `0.0.0.0/0`.
@@ -91,6 +96,67 @@ forwarding to the `app` target group, a redirecting HTTP listener on port
 the VPC, and hands `ecs_service` the target group ARN it needs with no
 lookup or key rename.
 
+### Blue/green with `ecs-service`
+
+The example above is `ecs-service`'s default ROLLING strategy. Its
+`BLUE_GREEN` strategy additionally needs, on every `load_balancers` entry,
+`advanced_configuration.production_listener_rule`: a listener-**rule** ARN,
+not a listener or target group ARN. `listener_rule_arns` provides it, keyed
+exactly like `listener_rules`:
+
+```hcl
+module "alb" {
+  source = "git::https://github.com/hatan4ik/aws.modules.alb.git?ref=<commit-sha>"
+
+  # name, vpc_id, public_subnet_ids, certificate_arn,
+  # security_group_ingress_cidrs as in the quick start ...
+
+  target_groups = {
+    blue  = { port = 8080 }
+    green = { port = 8080 }
+  }
+  default_target_group_key = "blue"
+
+  listener_rules = {
+    prod = {
+      priority         = 10
+      target_group_key = "blue"
+      conditions       = { path_patterns = ["/*"] }
+    }
+  }
+}
+
+module "ecs_service" {
+  source = "git::https://github.com/hatan4ik/aws.modules.ecs-service.git?ref=<commit-sha>"
+
+  # ...
+
+  deployment_configuration = { strategy = "BLUE_GREEN" }
+
+  load_balancers = {
+    app = {
+      target_group_arn = module.alb.target_group_arns["blue"]
+      container_name   = "app"
+      container_port   = 8080
+      advanced_configuration = {
+        alternate_target_group_arn = module.alb.target_group_arns["green"]
+        production_listener_rule   = module.alb.listener_rule_arns["prod"]
+        role_arn                   = aws_iam_role.ecs_blue_green.arn # ELB permissions for ECS
+      }
+    }
+  }
+}
+```
+
+`tests/listener_rule_arns.tftest.hcl` proves this wiring. One caveat: during
+a blue/green deployment ECS itself rewrites the production rule's forward
+action to shift traffic between the two target groups, so after a
+deployment that finishes on `green` the next plan of this module shows drift
+on `aws_lb_listener_rule.this["prod"]`'s action, and applying it would point
+the rule back at `blue`. This module does not yet expose weighted forward
+actions or an `ignore_changes` switch for rules ECS manages; review such
+plans before applying.
+
 ## Architecture
 
 ```text
@@ -103,7 +169,7 @@ root (one ALB)
 ├── waf.tf               aws_wafv2_web_acl_association.this[0]
 ├── locals.tf            Listener-existence flags, tags, active security group ports
 ├── checks.tf             deletion_protection_disabled, public_without_waf (advisory)
-└── outputs.tf            alb_arn, alb_dns_name, alb_zone_id, alb_arn_suffix, target_group_arns, security_group_id, https_listener_arn, http_listener_arn
+└── outputs.tf            alb_arn, alb_dns_name, alb_zone_id, alb_arn_suffix, target_group_arns, listener_rule_arns, security_group_id, https_listener_arn, http_listener_arn
 ```
 
 Listener existence is driven entirely by `create_http_only` and
@@ -169,10 +235,15 @@ Not created here
 
 ## Lifecycle notes
 
-- `aws_security_group.this` and every `aws_lb_target_group.this` entry use
-  `create_before_destroy = true`, so a change that would otherwise conflict
-  (a target group's `port` or `protocol`, for example) creates the
-  replacement before the old one is destroyed.
+- The security group (`module.security_group.aws_security_group.this_cbd[0]`)
+  and every `aws_lb_target_group.this` entry use `create_before_destroy =
+  true`, so a change that would otherwise conflict (a target group's `port`
+  or `protocol`, or the security group's description, for example) creates
+  the replacement before the old one is destroyed. The security group's AWS
+  name is generated from `name_prefix = "<name>-alb-"` (known only after
+  apply) so the replacement never collides with the old group's name; its
+  `Name` tag stays `<name>-alb`. Use `security_group_id` or the tag, never
+  the group name, to refer to it.
 - Target group and listener rule keys drive their `for_each`, so adding a
   `target_groups` or `listener_rules` entry adds exactly one resource
   instance and removing one removes exactly one.
@@ -298,7 +369,7 @@ Apache-2.0. See [LICENSE](LICENSE).
 
 | Name | Source | Version |
 |------|--------|---------|
-| <a name="module_security_group"></a> [security\_group](#module\_security\_group) | git::https://github.com/hatan4ik/aws.modules.security-group.git | a2142e9b7351c81735e4dbefdc7c66155dd4c266 |
+| <a name="module_security_group"></a> [security\_group](#module\_security\_group) | git::https://github.com/hatan4ik/aws.modules.security-group.git | 6cf3733d30f435ce107f02001adcdf6da74d81e2 |
 
 ## Resources
 
@@ -346,6 +417,7 @@ Apache-2.0. See [LICENSE](LICENSE).
 | <a name="output_alb_zone_id"></a> [alb\_zone\_id](#output\_alb\_zone\_id) | Route 53 hosted zone ID of the ALB, for an alias record through aws.modules.route53. |
 | <a name="output_http_listener_arn"></a> [http\_listener\_arn](#output\_http\_listener\_arn) | ARN of the HTTP listener (redirect or http-only), or null when redirect\_http\_to\_https = false and create\_http\_only = false, in which case no port 80 listener exists. |
 | <a name="output_https_listener_arn"></a> [https\_listener\_arn](#output\_https\_listener\_arn) | ARN of the HTTPS listener, or null when create\_http\_only = true and no HTTPS listener exists. |
+| <a name="output_listener_rule_arns"></a> [listener\_rule\_arns](#output\_listener\_rule\_arns) | Plain ARN of each listener rule, keyed by the same keys as the listener\_rules input; an empty map when listener\_rules is empty. Each value is a listener-RULE ARN (not a listener or target group ARN), exactly what aws.modules.ecs-service's load\_balancers[*].advanced\_configuration.production\_listener\_rule (and test\_listener\_rule) needs for a BLUE\_GREEN deployment, proved in tests/listener\_rule\_arns.tftest.hcl. |
 | <a name="output_security_group_id"></a> [security\_group\_id](#output\_security\_group\_id) | ID of the ALB's security group. |
 | <a name="output_target_group_arns"></a> [target\_group\_arns](#output\_target\_group\_arns) | Plain ARN of each target group, keyed by the same keys as the target\_groups input. Drop this straight into aws.modules.ecs-service's load\_balancers[*].target\_group\_arn with no translation: this is the module's interface contract with ecs-service, proved in tests/target\_group\_arns.tftest.hcl. |
 <!-- END_TF_DOCS -->

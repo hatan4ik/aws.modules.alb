@@ -23,6 +23,11 @@ output "target_group_arns" {
   value       = { for key, tg in aws_lb_target_group.this : key => tg.arn }
 }
 
+output "listener_rule_arns" {
+  description = "Plain ARN of each listener rule, keyed by the same keys as the listener_rules input; an empty map when listener_rules is empty. Each value is a listener-RULE ARN (not a listener or target group ARN), exactly what aws.modules.ecs-service's load_balancers[*].advanced_configuration.production_listener_rule (and test_listener_rule) needs for a BLUE_GREEN deployment, proved in tests/listener_rule_arns.tftest.hcl."
+  value       = { for key, rule in aws_lb_listener_rule.this : key => rule.arn }
+}
+
 output "security_group_id" {
   description = "ID of the ALB's security group."
   value       = module.security_group.id

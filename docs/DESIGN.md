@@ -57,6 +57,36 @@ the output exactly as a caller would, into an object matching
 `ecs-service`'s `load_balancers` element type, and asserts that reshaped
 value's field names against that type by construction.
 
+### Blue/green: `listener_rule_arns`
+
+`target_group_arns` alone covers `ecs-service`'s ROLLING strategy. Its
+BLUE_GREEN strategy also requires, on every `load_balancers` entry,
+
+```hcl
+advanced_configuration = optional(object({
+  alternate_target_group_arn = string
+  production_listener_rule   = string
+  role_arn                   = string
+  test_listener_rule         = optional(string)
+}))
+```
+
+where `production_listener_rule` (and `test_listener_rule`) is a
+listener-**rule** ARN. `listener_rule_arns` is a `map(string)` keyed exactly
+like `listener_rules` (the `for_each` key of `aws_lb_listener_rule.this`),
+each value that rule's ARN, and an empty map when no rules are declared. The
+alternate target group comes from `target_group_arns`, so both blue/green
+inputs are plain output lookups with no ARN reconstruction.
+`tests/listener_rule_arns.tftest.hcl` proves the keys, the ARN kind, the
+empty-map case, and the fold into `advanced_configuration`.
+
+ECS rewrites the production rule's forward action during a blue/green
+deployment. This module still renders that rule with a single forward
+target group, so after a deployment that ends on the alternate target group
+the next plan shows drift on the rule's action. Weighted forward actions or
+an opt-in `ignore_changes` for ECS-managed rules would close that; neither
+exists yet (see "Out of scope for v1").
+
 ## What this module deliberately does not do
 
 - **No submodule call to `aws.modules.waf`.** `web_acl_arn` is a plain string
@@ -146,7 +176,7 @@ root (one ALB)
 ├── listener_rules.tf    aws_lb_listener_rule.this[*], attached to whichever listener is primary.
 ├── waf.tf               aws_wafv2_web_acl_association.this[0], only when web_acl_arn is set.
 ├── checks.tf             Advisory checks: deletion_protection_disabled, public_without_waf.
-└── outputs.tf            alb_arn, alb_dns_name, alb_zone_id, alb_arn_suffix, target_group_arns, security_group_id, https_listener_arn, http_listener_arn.
+└── outputs.tf            alb_arn, alb_dns_name, alb_zone_id, alb_arn_suffix, target_group_arns, listener_rule_arns, security_group_id, https_listener_arn, http_listener_arn.
 ```
 
 ## Principles and how the module applies them
@@ -210,6 +240,10 @@ root (one ALB)
   asserts the output map's keys equal the input map's keys, then reshapes the
   output into the exact object shape `ecs-service`'s `load_balancers`
   element type expects and asserts that shape holds.
+- `tests/listener_rule_arns.tftest.hcl` is the blue/green interface-contract
+  test: `listener_rule_arns` keys equal `listener_rules` keys, every value is
+  a listener-rule ARN, the map is empty (not null) with no rules, and it folds
+  into `ecs-service`'s `advanced_configuration.production_listener_rule`.
 - `tests/validation.tftest.hcl` exercises every variable validation and
   precondition with `expect_failures`, paired with a passing run for each
   rule.
@@ -240,6 +274,10 @@ root (one ALB)
   HTTPS default) are supported. A caller with an auth requirement composes it
   outside the module today; a future minor version can add it as another
   optional action shape without breaking this interface.
+- Weighted forward actions on listener rules, and any `ignore_changes` for a
+  rule ECS manages during a blue/green deployment: `listener_rule_arns`
+  makes ECS BLUE_GREEN wiring possible, but ECS's traffic shifting on the
+  production rule shows up as drift on the next plan of this module.
 - Cross-zone load balancing and connection draining beyond
   `deregistration_delay` are left at the AWS default (both enabled) since the
   brief does not ask for them and the AWS defaults are already the

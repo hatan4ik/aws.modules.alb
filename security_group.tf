@@ -10,13 +10,24 @@
 # performs no data-source reads by design, so the caller (this module) does
 # that lookup itself and passes the resolved CIDR straight to the egress
 # rule's cidr_ipv4.
+#
+# The ref below is commit 6cf3733 on aws.modules.security-group's main,
+# which is tag v1.2.0 (the tag exists but its GitHub Release publish step
+# failed on an unrelated signing-verification issue in the release pipeline
+# itself -- the commit and its code are the real, merged v1.2.0, so pinning
+# to it directly is correct regardless of whether the Release page exists).
+# It carries the 1.2.0 fix that names the create_before_destroy group with
+# name_prefix = "<name>-" instead of a fixed name, so a description-only
+# change no longer fails with InvalidGroup.Duplicate. The group's AWS name
+# is therefore generated ("<var.name>-alb-" plus a unique suffix, known
+# after apply); its Name tag stays "<var.name>-alb".
 
 data "aws_vpc" "this" {
   id = var.vpc_id
 }
 
 module "security_group" {
-  source = "git::https://github.com/hatan4ik/aws.modules.security-group.git?ref=a2142e9b7351c81735e4dbefdc7c66155dd4c266" # v1.1.0
+  source = "git::https://github.com/hatan4ik/aws.modules.security-group.git?ref=6cf3733d30f435ce107f02001adcdf6da74d81e2" # v1.2.0
 
   create_before_destroy_group = true
   name                        = "${var.name}-alb"
