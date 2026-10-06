@@ -89,7 +89,7 @@ variable "redirect_http_to_https" {
 }
 
 variable "web_acl_arn" {
-  description = "ARN of a REGIONAL-scope WAFv2 web ACL (for example from aws.modules.waf) to associate with the ALB. Optional: this module takes the ARN as a plain input and never calls aws.modules.waf itself, the same \"every external dependency is an identifier the caller passes in\" pattern as aws.modules.ksm and aws.modules.state."
+  description = "ARN of a REGIONAL-scope WAFv2 web ACL (for example from aws.modules.waf) to associate with the ALB. Optional: this module takes the ARN as a plain input and never calls aws.modules.waf itself, the same \"every external dependency is an identifier the caller passes in\" pattern as aws.modules.kms and aws.modules.state."
   type        = string
   default     = null
 
