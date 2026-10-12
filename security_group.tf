@@ -31,7 +31,7 @@ module "security_group" {
 
   create_before_destroy_group = true
   name                        = "${var.name}-alb"
-  description                 = "Controls access to the ${var.name} ALB's listeners; egress is scoped to the VPC CIDR only."
+  description                 = "Controls access to the ${var.name} ALB listeners; egress is scoped to the VPC CIDR only."
   vpc_id                      = var.vpc_id
 
   ingress_rules = {

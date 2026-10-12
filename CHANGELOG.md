@@ -14,6 +14,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - **Dependency:** `aws.modules.security-group` moves from v1.1.0 (`a2142e9`) to v1.2.0 (`6cf3733d30f435ce107f02001adcdf6da74d81e2`). This picks up the fix for `create_before_destroy_group = true`: the ALB's security group is now named by AWS from `name_prefix = "<name>-alb-"` (its `name` is known only after apply) instead of the fixed `<name>-alb`, so a description-only change creates the replacement first without failing on `InvalidGroup.Duplicate`. The `Name` tag stays `<name>-alb`. Upgrade impact for an ALB already applied with 1.0.1: the first plan replaces `module.security_group.aws_security_group.this_cbd[0]` once (create-before-destroy), so the security group ID changes and the ALB's `security_groups` is updated to the new ID before the old group is deleted; anything outside this configuration referencing the old ID blocks that deletion.
 
+### Fixed
+
+- **Security group description character set:** Removed apostrophe from the ALB security group description (`ALB's` -> `ALB`) so AWS EC2 `CreateSecurityGroup` accepts it. The EC2 API strictly limits descriptions to `[a-zA-Z0-9. _-:/()#,@[]+=&;{}!$*]`; an apostrophe triggers HTTP 400 `InvalidParameterValue`.
+
 ## [1.0.1] - 2026-09-29
 
 ### Changed
